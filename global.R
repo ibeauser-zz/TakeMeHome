@@ -9,12 +9,16 @@ if (!require(httr)) install.packages("httr"); library(httr)
 #IATA.codes <- fread("IATA.codes.csv",header = TRUE,encoding = "Latin-1")
 #setkey(IATA.codes,COUNTRY,CITY,AC)
 source("keys.R")
+
 ## return responses from SITA Airport FIDS API
 sita.response <- GET(url = "https://airport.api.aero/airport", query = list(user_key = sita.key))
 sita.content <- content(sita.response, as = "parsed", encoding = "Latin-1")
 IATA.airports <- data.table(t(sapply(sita.content$airports, function(x) c(code = ifelse(is.null(x[[1]]),NA,x[[1]]), name = ifelse(is.null(x[[2]]),NA,x[[2]]), city = ifelse(is.null(x[[3]]),NA,x[[3]]), country = ifelse(is.null(x[[4]]),NA,x[[4]]), timezone = ifelse(is.null(x[[5]]),NA,x[[5]]), latitude = ifelse(is.null(x[[6]]),NA,x[[6]]), longitude = ifelse(is.null(x[[7]]),NA,x[[7]]), terminal = ifelse(is.null(x[[8]]),NA,x[[8]]), gate = ifelse(is.null(x[[9]]),NA,x[[9]])))))
 IATA.airports <- IATA.airports[!is.na(name)]
 setkey(IATA.airports,country,city,code)
+
+## for collecting timings
+qpx.response <- NULL
 
 ## take User Input and return responses from Google's QPX Express Airfare API
 OptionsTable <- function(here,home,date) {
@@ -38,11 +42,12 @@ OptionsTable <- function(here,home,date) {
   body <- jsonlite::toJSON(tmp, auto_unbox = TRUE, pretty = TRUE)
   url <- "https://www.googleapis.com/qpxExpress/v1/trips/search"
   qpxExpress.response <- POST(url = url, query = list(fields = "trips",key = qpx.key), body = body, encode = "json", content_type_json())
-  qpxExpress.content <- content(qpxExpress.response, as = "parsed", encoding = "Latin-1")
-  ifelse(length(qpxExpress.content$trip$data) == 1L, options <- data.table(NULL), {#capture null return from Google
+  qpx.response <<- qpxExpress.response
+  qpx.content <- content(qpxExpress.response, as = "parsed", encoding = "Latin-1")
+  ifelse(length(qpx.content$trip$data) == 1L, options <- data.table(NULL), {#capture null return from Google
 
   ## rework response into lookup data.tables
-  lookup.data <- qpxExpress.content$trips$data
+  lookup.data <- qpx.content$trips$data
   airport <- data.table(t(sapply(lookup.data$airport, function(x) c(code = x[[2]], city = x[[3]], name = x[[4]]))))
   airport[, id := seq_len(.N)]
   setkey(airport,id)
@@ -60,7 +65,7 @@ OptionsTable <- function(here,home,date) {
   setkey(tax,id)
 
   ## rework response into options data.table
-  trip.options <- qpxExpress.content$trips$tripOption
+  trip.options <- qpx.content$trips$tripOption
   options.dt <- data.table(sapply(trip.options, unlist, recursive = FALSE, use.names = TRUE), keep.rownames = FALSE)
 
   options <- data.table(ldply(options.dt[, .SD], function(x) data.table(parameter = names(unlist(x)), value = unlist(x, use.names = FALSE))))
@@ -145,5 +150,4 @@ FlightOptions <- function(routes) {
   })
   return(flights)
 }
-
 
