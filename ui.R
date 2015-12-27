@@ -55,7 +55,7 @@ shinyUI(fluidPage(
                     tags$div(class = "span", uiOutput(outputId = "flights"),
                              style = "margin: 1px;"),
                     tags$div(class = "span",
-                             p("The flights quoted are based on one passenger flying coach, and having no more than two stops along the way.  There may be more options, but this app restricts the number to three.  Also note there are no date choices; the app returns flights scheduled to depart tomorrow.",
+                             p("The flights quoted are based on one passenger flying coach, and having no more than two stops along the way.  There may be more options, but this app restricts the number to three.  Also note there are no date choices; this demonstration app returns only flights scheduled to depart tomorrow.",
                     br(),br(),
                     strong("PRIVACY:")," This app is not coded to store user session information.  However, it is possible that ShinyApps.io does collect and store your data.  Check their ",a(href = "https://www.rstudio.com/about/privacy-policy/","Privacy Policy")," to find out more.",
                     br(),br(),
